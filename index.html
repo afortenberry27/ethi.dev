@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ethi.dev prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: desktop app shell (sidebar | conversation | canvas), styled with the Libre tokens from Figma. Light mode only, as in the design system. */
+:root{
+  color-scheme: light;
+  /* primitives */
+  --paper:#FEFDFB; --ivory:#FAF6EC; --slate:#D8CFB8; --sand:#DED3B9; --moss:#6B8A62; --moss-dark:#5A7752;
+  --evergreen:#234A34; --forest:#173323; --terracotta:#B4552F; --ochre:#C9963F; --ink:#24221E; --stone:#6A655B; --white:#FFFFFF;
+  /* semantic */
+  --bg-canvas:var(--ivory); --bg-surface:var(--paper); --bg-brand:var(--evergreen); --bg-brand-hover:var(--forest);
+  --bg-selected:#D8E0D3; --bg-subtle:var(--sand);
+  --text-primary:var(--ink); --text-secondary:#555045; --text-tertiary:var(--stone); --text-brand:var(--evergreen); --text-on-brand:var(--white);
+  --border-default:var(--slate); --border-input:#948A73; --border-brand:var(--evergreen);
+  --sev-high:var(--terracotta); --sev-medium:var(--ochre); --sev-low:var(--moss-dark);
+  --scrim:rgba(36,34,30,.32);
+  --font-heading:"Libre Baskerville", Georgia, "Times New Roman", serif;
+  --font-body:"Source Sans 3", "Source Sans Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* minor third from 16 */
+  --fs-11:11px; --fs-13:13px; --fs-16:16px; --fs-19:19px; --fs-23:23px; --fs-33:33px; --fs-48:48px;
+  --sp-2xs:4px; --sp-xs:8px; --sp-sm:12px; --sp-md:16px; --sp-lg:24px; --sp-xl:32px; --sp-3xl:64px;
+  --r-card:16px; --r-pill:999px; --r-swatch:8px;
+  --shadow-pop:0 12px 32px rgba(36,34,30,.12), 0 2px 6px rgba(36,34,30,.06);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg-canvas);color:var(--text-primary);font-family:var(--font-body);font-size:var(--fs-16);line-height:1.55;letter-spacing:.02em;display:flex;flex-direction:column;overflow:hidden}
+button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--evergreen);outline-offset:2px}
+h1,h2,h3{font-family:var(--font-heading);font-weight:700;text-wrap:balance;margin:0;letter-spacing:0}
+
+/* Prototype bar (not part of the product) */
+.protobar{flex:none;display:flex;align-items:center;gap:var(--sp-sm);flex-wrap:wrap;padding-block:6px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));background:var(--forest);color:#E6EDE2;font-size:var(--fs-13)}
+.protobar strong{font-weight:600;color:var(--white)}
+.protobar .jumps{display:flex;gap:4px;flex-wrap:wrap}
+.protobar button{padding:3px 10px;border-radius:var(--r-pill);border:1px solid rgba(255,255,255,.25);color:#E6EDE2}
+.protobar button:hover{background:rgba(255,255,255,.1)}
+.protobar button.on{background:#E6EDE2;color:var(--forest);border-color:#E6EDE2}
+.protobar .sp{flex:1}
+
+/* App shell */
+.app{flex:1;min-height:0;display:grid;grid-template-columns:232px 1fr;background:var(--bg-canvas)}
+.side{background:var(--bg-surface);border-right:1px solid var(--border-default);padding:var(--sp-lg) var(--sp-sm);display:flex;flex-direction:column;gap:var(--sp-xs);overflow:auto}
+.logo{font-family:var(--font-heading);font-weight:700;font-size:var(--fs-23);color:var(--text-brand);padding:0 var(--sp-2xs) var(--sp-xs)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-pill);padding:9px 18px;font-weight:600;font-size:var(--fs-16);line-height:1.1;white-space:nowrap;transition:background .15s}
+.btn-primary{background:var(--bg-brand);color:var(--text-on-brand)}
+.btn-primary:hover{background:var(--bg-brand-hover)}
+.btn-secondary{border:1.5px solid var(--border-brand);color:var(--text-brand);background:var(--bg-surface)}
+.btn-secondary:hover{background:var(--bg-selected)}
+.btn-sm{padding:6px 14px;font-size:var(--fs-13)}
+.btn[disabled]{opacity:.45;cursor:default}
+.side .btn{width:100%;margin-bottom:var(--sp-xs)}
+.navlink{display:block;text-align:left;padding:6px var(--sp-xs);border-radius:var(--r-swatch);color:var(--text-secondary)}
+.navlink:hover{background:var(--bg-canvas)}
+.overline{font-size:var(--fs-11);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-tertiary)}
+.side .overline{padding:var(--sp-md) var(--sp-xs) var(--sp-2xs)}
+.recent{display:block;width:100%;text-align:left;padding:7px var(--sp-xs);border-radius:var(--r-swatch);font-size:var(--fs-13);font-weight:500}
+.recent:hover{background:var(--bg-canvas)}
+.recent.on{background:var(--bg-selected);color:var(--text-brand)}
+
+.main{min-width:0;min-height:0;display:flex}
+.col{min-width:0;min-height:0;display:flex;flex-direction:column}
+.scroll{flex:1;min-height:0;overflow:auto}
+
+/* Entry */
+.entry{flex:1;overflow:auto;display:flex;justify-content:center;padding:var(--sp-3xl) var(--sp-lg) var(--sp-xl)}
+.entry-inner{width:100%;max-width:680px;display:flex;flex-direction:column;gap:var(--sp-lg);margin:auto 0}
+.entry h1{font-size:var(--fs-48);line-height:1.1;color:var(--text-brand);text-align:center}
+.lead{font-size:var(--fs-19);line-height:1.3;color:var(--text-secondary);text-align:center;max-width:36em;margin:0 auto}
+.samples{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-sm)}
+.sample{text-align:left;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-card);padding:var(--sp-md);display:flex;flex-direction:column;gap:4px;transition:border-color .15s, transform .15s}
+.sample:hover{border-color:var(--border-brand);transform:translateY(-1px)}
+.sample b{font-weight:600}
+.sample span{font-size:var(--fs-13);color:var(--text-secondary);line-height:1.45}
+.center-cap{text-align:center;font-size:var(--fs-13);color:var(--text-secondary)}
+
+/* Composer */
+.composer{background:var(--bg-surface);border:1px solid var(--border-input);border-radius:var(--r-card);padding:var(--sp-sm) var(--sp-md);display:flex;flex-direction:column;gap:var(--sp-xs);box-shadow:0 4px 18px rgba(36,34,30,.05)}
+.composer:focus-within{border-color:var(--border-brand);box-shadow:0 0 0 3px rgba(35,74,52,.12)}
+.composer textarea{border:0;outline:0;background:transparent;resize:none;min-height:28px;max-height:160px;width:100%;line-height:1.45}
+.composer textarea::placeholder{color:var(--text-tertiary)}
+.comp-row{display:flex;align-items:center;gap:var(--sp-xs);flex-wrap:wrap}
+.comp-row .sp{flex:1}
+.send{width:34px;height:34px;border-radius:50%;background:var(--bg-brand);color:var(--white);display:grid;place-items:center;flex:none}
+.send:hover{background:var(--bg-brand-hover)}
+.send svg{width:16px;height:16px}
+.composer.compact{padding:var(--sp-xs) var(--sp-xs) var(--sp-xs) var(--sp-md);flex-direction:row;align-items:center;border-radius:var(--r-pill)}
+.composer.compact textarea{min-height:24px;padding:4px 0}
+.attach{display:inline-flex;align-items:center;gap:var(--sp-xs);border:1px solid var(--border-default);border-radius:var(--r-swatch);padding:6px 10px;font-size:var(--fs-13);background:var(--bg-canvas)}
+.fileicon{width:16px;height:20px;border-radius:3px;background:var(--evergreen);position:relative;flex:none}
+.fileicon::after{content:"PDF";position:absolute;inset:auto 0 3px;font-size:6px;font-weight:700;color:var(--white);text-align:center;letter-spacing:0}
+.limits{font-size:var(--fs-13);color:var(--text-secondary);text-align:center}
+
+/* Chips */
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-input);border-radius:var(--r-pill);padding:5px 12px;font-size:var(--fs-13);font-weight:500;color:var(--text-brand);background:var(--bg-surface);line-height:1.2}
+.chip:hover{border-color:var(--border-brand)}
+.chip[aria-pressed="true"]{background:var(--bg-selected);border-color:var(--border-brand);font-weight:600}
+.chip[aria-pressed="true"]::before{content:"";width:10px;height:6px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg) translate(1px,-1px)}
+.chip.static{cursor:default}
+.chip .caret{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor}
+
+/* Chat */
+.thread{box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-lg);padding:var(--sp-xl) var(--sp-xl) var(--sp-lg);max-width:900px;width:100%;margin:0 auto}
+.msg-user{align-self:flex-end;max-width:85%;min-width:0;overflow-wrap:anywhere;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-card) var(--r-card) 4px var(--r-card);padding:var(--sp-sm) var(--sp-md);display:flex;flex-direction:column;gap:var(--sp-xs)}
+.msg-user .quote{font-size:var(--fs-11);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-tertiary)}
+.msg-bot{display:grid;grid-template-columns:24px minmax(0,1fr);gap:var(--sp-sm);align-items:start}
+.avatar{width:24px;height:24px;border-radius:50%;background:var(--evergreen);color:var(--white);font-family:var(--font-heading);font-weight:700;font-size:13px;display:grid;place-items:center;margin-top:2px}
+.bot-body{min-width:0;display:flex;flex-direction:column;gap:var(--sp-sm)}
+.bot-body p{margin:0;max-width:62ch}
+.card{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-card);padding:var(--sp-md)}
+.summary-list{display:flex;flex-direction:column;gap:6px;font-size:var(--fs-16)}
+.summary-list b{font-weight:600}
+.summary-list [contenteditable="true"]{outline:1px dashed var(--border-input);border-radius:4px;padding:0 4px;background:var(--bg-canvas)}
+.row-btns{display:flex;gap:var(--sp-xs);flex-wrap:wrap;align-items:center}
+.qcard{display:flex;flex-direction:column;gap:var(--sp-sm)}
+.qcard h3{font-family:var(--font-body);font-size:var(--fs-16);font-weight:600}
+.chips{display:flex;gap:var(--sp-xs);flex-wrap:wrap}
+.caption{font-size:var(--fs-13);color:var(--text-secondary)}
+.typing{display:flex;gap:5px;padding:8px 0}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--moss);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.steps{display:flex;flex-direction:column;gap:6px;font-size:var(--fs-13)}
+.step{display:flex;gap:var(--sp-xs);align-items:center;color:var(--text-tertiary)}
+.step.done{color:var(--text-primary)}
+.step .tick{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border-input);flex:none;display:grid;place-items:center}
+.step.done .tick{border-color:var(--evergreen);background:var(--evergreen)}
+.step.done .tick::after{content:"";width:6px;height:3px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px)}
+.followups{display:flex;flex-direction:column;gap:2px}
+.followup{text-align:left;color:var(--text-brand);font-size:var(--fs-13);padding:3px 0}
+.followup:hover{text-decoration:underline}
+.sources{font-size:var(--fs-13);color:var(--text-brand)}
+.reasoning{align-self:flex-start;font-size:var(--fs-13);color:var(--text-secondary);border:1px solid var(--border-default);border-radius:var(--r-pill);padding:4px 12px;background:var(--bg-surface)}
+.reasoning-list{margin:0;padding-left:20px;font-size:var(--fs-13);color:var(--text-secondary);display:flex;flex-direction:column;gap:2px}
+.composer-wrap{box-sizing:border-box;flex:none;padding:var(--sp-sm) var(--sp-xl) var(--sp-md);max-width:900px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+
+/* Context panel */
+.ctx{width:300px;flex:none;border-left:1px solid var(--border-default);background:var(--bg-canvas);padding:var(--sp-lg);overflow:auto;display:flex;flex-direction:column;gap:var(--sp-sm)}
+.ctx h2{font-family:var(--font-body);font-size:var(--fs-19);font-weight:600}
+.field{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:var(--fs-13)}
+
+/* Report split */
+.chatcol{width:360px;flex:none;border-right:1px solid var(--border-default)}
+.chatcol .thread{padding:var(--sp-lg);gap:var(--sp-md)}
+.chatcol .composer-wrap{padding:var(--sp-sm) var(--sp-lg) var(--sp-md)}
+.canvas{flex:1;min-width:0;overflow:auto;padding:var(--sp-lg) var(--sp-xl) var(--sp-xl);display:flex;flex-direction:column;gap:var(--sp-md)}
+.canvas > *{flex:none}
+.canvas-head{display:flex;align-items:flex-start;gap:var(--sp-sm);flex-wrap:wrap}
+.canvas-head h2{font-size:var(--fs-23);line-height:1.25;flex:1;min-width:240px}
+.seg{display:inline-flex;border:1px solid var(--border-input);border-radius:var(--r-pill);overflow:hidden}
+.seg button{padding:6px 14px;font-size:var(--fs-13);font-weight:600;color:var(--text-brand)}
+.seg button[aria-pressed="true"]{background:var(--bg-selected)}
+.filters{display:flex;gap:var(--sp-xs);flex-wrap:wrap;align-items:center;position:relative}
+.menu{position:absolute;z-index:20;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;min-width:190px;display:flex;flex-direction:column}
+.menu button{text-align:left;padding:7px 10px;border-radius:8px;font-size:var(--fs-13);display:flex;justify-content:space-between;gap:var(--sp-sm)}
+.menu button:hover{background:var(--bg-canvas)}
+.menu button[aria-checked="true"]{background:var(--bg-selected);color:var(--text-brand);font-weight:600}
+.gridwrap{overflow-x:auto;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-card)}
+table.grid{border-collapse:collapse;width:100%;min-width:560px;font-size:var(--fs-13)}
+.grid th,.grid td{padding:0;border-bottom:1px solid var(--border-default);text-align:left}
+.grid tr:last-child td,.grid tr:last-child th{border-bottom:0}
+.grid thead th{padding:10px 12px;font-weight:600;color:var(--text-secondary)}
+.grid tbody th{padding:10px 12px;font-weight:600;width:130px}
+.cellbtn{width:100%;min-height:44px;padding:8px 12px;display:flex;align-items:center;gap:6px;text-align:left;border-radius:0}
+.cellbtn:hover{background:var(--bg-canvas)}
+.cellbtn.sel{background:var(--bg-selected);box-shadow:inset 0 0 0 2px var(--border-brand)}
+.cellbtn.dim{opacity:.28}
+.nf{color:var(--text-tertiary);font-size:var(--fs-11);letter-spacing:.04em}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:var(--r-pill);padding:4px 9px;font-size:var(--fs-11);font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1}
+.badge.high{background:var(--sev-high);color:var(--white)}
+.badge.medium{background:var(--sev-medium);color:var(--ink)}
+.badge.low{background:var(--sev-low);color:var(--white)}
+.badge.dismissed{background:transparent;border:1px dashed var(--border-input);color:var(--text-tertiary)}
+.badge.addressed{background:transparent;border:1.5px solid var(--evergreen);color:var(--evergreen)}
+.mark{font-size:var(--fs-11);color:var(--text-tertiary)}
+.legend{display:flex;gap:var(--sp-md);flex-wrap:wrap;font-size:var(--fs-13);color:var(--text-secondary);align-items:center}
+.detail{display:flex;flex-direction:column;gap:var(--sp-sm);border-color:var(--border-brand);border-width:1.5px}
+.detail-head{display:flex;gap:var(--sp-xs);align-items:center;flex-wrap:wrap}
+.detail-head h3{font-family:var(--font-body);font-size:var(--fs-19);font-weight:600;margin-right:4px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px var(--sp-sm);font-size:var(--fs-16);margin:0}
+.kv dt{font-size:var(--fs-11);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-tertiary);padding-top:4px}
+.kv dd{margin:0;max-width:62ch}
+.actions{display:flex;gap:var(--sp-xs);flex-wrap:wrap;padding-top:var(--sp-xs);border-top:1px solid var(--border-default)}
+.subpanel{background:var(--bg-canvas);border-radius:12px;padding:var(--sp-md);display:flex;flex-direction:column;gap:var(--sp-sm)}
+.subpanel h4{margin:0;font-size:var(--fs-16);font-weight:600}
+.textin{width:100%;border:1px solid var(--border-input);border-radius:var(--r-pill);padding:8px 14px;background:var(--bg-surface);outline:0}
+.textin:focus{border-color:var(--border-brand);box-shadow:0 0 0 3px rgba(35,74,52,.12)}
+.versions{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-13);color:var(--text-secondary)}
+.versions button{border:1px solid var(--border-input);border-radius:6px;padding:0 7px;font-size:var(--fs-13)}
+.versions button[aria-pressed="true"]{background:var(--bg-selected);border-color:var(--border-brand);color:var(--text-brand);font-weight:600}
+.dismissed-list summary{cursor:pointer;font-size:var(--fs-13);font-weight:600;color:var(--text-secondary);padding:4px 0}
+.dismissed-list ul{margin:var(--sp-xs) 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.dismissed-list li{font-size:var(--fs-13);display:flex;gap:var(--sp-xs);flex-wrap:wrap;align-items:center}
+.list{display:flex;flex-direction:column;gap:var(--sp-xs)}
+.lrow{display:flex;gap:var(--sp-sm);align-items:center;flex-wrap:wrap;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:12px;padding:10px var(--sp-md)}
+.lrow .t{flex:1;min-width:200px;text-align:left;font-weight:600}
+.lrow .t span{display:block;font-weight:400;font-size:var(--fs-13);color:var(--text-secondary)}
+.fb{display:flex;gap:6px}
+
+/* Dialog */
+.scrim{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;z-index:50;padding:var(--sp-md)}
+.dialog{width:100%;max-width:470px;background:var(--bg-surface);border-radius:20px;box-shadow:var(--shadow-pop);padding:var(--sp-lg);display:flex;flex-direction:column;gap:var(--sp-md);max-height:100%;overflow:auto}
+.dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--sp-sm)}
+.dialog-head h2{font-size:var(--fs-23)}
+.xbtn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border-default);display:grid;place-items:center;flex:none}
+.xbtn:hover{background:var(--bg-canvas)}
+.opt{text-align:left;border:1px solid var(--border-input);border-radius:12px;padding:var(--sp-sm) var(--sp-md);display:flex;justify-content:space-between;align-items:center;gap:var(--sp-sm)}
+.opt b{display:block;font-weight:600}
+.opt span{font-size:var(--fs-13);color:var(--text-secondary)}
+.opt[aria-checked="true"]{background:var(--bg-selected);border-color:var(--border-brand);border-width:1.5px}
+.opt .radio{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border-input);flex:none}
+.opt[aria-checked="true"] .radio{border:5px solid var(--evergreen)}
+.linkrow{display:flex;gap:var(--sp-xs);align-items:center;background:var(--bg-canvas);border:1px solid var(--border-default);border-radius:12px;padding:6px 6px 6px 12px;font-size:var(--fs-13)}
+.linkrow code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-body)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:var(--r-pill);font-size:var(--fs-13);z-index:60;box-shadow:var(--shadow-pop);max-width:calc(100% - 32px)}
+
+.fade{animation:fadeIn .35s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+/* Narrow widths: sidebar collapses; panels stack */
+.menubtn{display:none}
+@media (max-width: 1100px){ .ctx{display:none} .chatcol{width:320px} }
+@media (max-width: 860px){
+  body{overflow:auto}
+  .app{grid-template-columns:1fr}
+  .side{display:none}
+  .side.open{display:flex;position:fixed;inset:0 30% 0 0;z-index:40;box-shadow:var(--shadow-pop)}
+  .menubtn{display:inline-flex}
+  .main{flex-direction:column;overflow:auto}
+  .chatcol{width:auto;border-right:0;border-bottom:1px solid var(--border-default)}
+  .chatcol .scroll{max-height:none;overflow:visible}
+  .canvas{overflow:visible;padding:var(--sp-lg) var(--sp-md)}
+  .scroll{overflow:visible}
+  .thread{padding:var(--sp-lg) var(--sp-md)}
+  .composer-wrap{padding:var(--sp-sm) var(--sp-md) var(--sp-md)}
+  .samples{grid-template-columns:1fr}
+  .entry{padding:var(--sp-xl) var(--sp-md)}
+  .entry h1{font-size:var(--fs-33)}
+  .lead{font-size:var(--fs-16)}
+  .kv{grid-template-columns:1fr}
+}
+.mobilebar{display:none}
+@media (max-width: 860px){.mobilebar{display:flex;align-items:center;gap:var(--sp-sm);padding:var(--sp-sm) var(--sp-md);border-bottom:1px solid var(--border-default);background:var(--bg-surface)}}
+</style>
+</head>
+<body>
+
+<div class="protobar" role="navigation" aria-label="Prototype controls">
+  <strong>ethi.dev · clickable prototype</strong><span>Dummy data, no live AI.</span>
+  <span class="sp"></span>
+  <span>Jump to:</span>
+  <div class="jumps" id="jumps"></div>
+  <button type="button" data-action="reset">Reset</button>
+</div>
+
+<div class="app">
+  <aside class="side" id="side" aria-label="Reviews"></aside>
+  <div class="col" style="min-height:0">
+    <div class="mobilebar"><button class="btn btn-secondary btn-sm menubtn" data-action="toggle-side">Menu</button><span class="logo" style="padding:0">ethi.dev</span></div>
+    <main class="main" id="main" style="flex:1"></main>
+  </div>
+</div>
+<div id="layer"></div>
+
+<script>
+/* ---------- Sample data (dummy) ---------- */
+const SOURCES = {
+  nist:"NIST AI RMF 1.0", euai:"EU AI Act", hipaa:"HIPAA Privacy Rule", ferpa:"FERPA",
+  unesco:"UNESCO Recommendation on the Ethics of AI", oecd:"OECD AI Principles", gdpr:"GDPR Art. 9", acm:"ACM Code of Ethics"
+};
+const LV = {low:1, medium:2, high:3}; const NAME = {1:"low",2:"medium",3:"high"};
+
+const REVIEWS = {
+ triage:{
+  title:"Pediatric triage assistant", file:"pediatric-triage-abstract.pdf",
+  blurb:"Chatbot that suggests urgency levels from parents' symptom notes",
+  summary:{Purpose:"suggest urgency levels from parents' symptom notes", Users:"parents at home; nurses review flagged cases", Data:"free-text symptoms, child age, past visit notes", Setting:"clinic patient portal"},
+  ctx:{Domain:"Healthcare · pediatrics", Stage:"Brainstorming", "Stakeholders (detected)":"Children, parents, nurses, clinic"},
+  frameworks:["nist","euai","hipaa"],
+  stakeholders:["Children","Parents","Nurses","Clinic"],
+  principles:["Privacy","Fairness","Safety","Autonomy","Transparency"],
+  cells:{
+   "Privacy|Children":{s:"high",t:"Visit notes can identify minors, and children can't consent to how their data is used.",m:"Strip names, schools and IDs before storage; keep notes for 30 days at most.",o:"Audit a sample of stored notes each quarter for identifiers.",src:["nist","hipaa"],why:["Parents' notes often include names, schools and diagnoses.","Children can't consent, so the duty of care sits with the team.","A leak follows a child for years.","So severity is high even in a clinic pilot."]},
+   "Privacy|Parents":{s:"medium",t:"Parents share family details (custody, other siblings) that the triage doesn't need.",m:"Show a short notice of what's stored; let parents delete a conversation.",o:"Track how often parents use delete and why.",src:["hipaa"],why:["Free text invites over-sharing.","The detail isn't needed for urgency.","Moderate harm if exposed."]},
+   "Privacy|Nurses":{s:"low",t:"Nurse review actions are logged and could be used for performance monitoring.",m:"Agree with nursing staff on what logs are used for.",o:"Review log access once per term.",src:["nist"],why:["Logs exist for safety, but they can drift into surveillance.","Limited scope keeps severity low."]},
+   "Privacy|Clinic":{s:"medium",t:"The clinic becomes the data controller for a new kind of sensitive record.",m:"Run a data protection impact assessment before the pilot.",o:"Keep a register of who can access triage records.",src:["hipaa","euai"],why:["New record type means new legal duties.","Most clinics have processes, so medium, not high."]},
+   "Fairness|Children":{s:"medium",t:"Symptoms in children with disabilities or chronic illness may be under-triaged.",m:"Test urgency suggestions on cases with existing conditions.",o:"Compare urgency outcomes across patient groups monthly.",src:["nist"],why:["Training data is usually typical cases.","Atypical presentations are where models miss.","Harm is real but nurses review flagged cases."]},
+   "Fairness|Parents":{s:"medium",t:"Parents who write less fluent English may get lower urgency scores.",m:"Offer the form in the clinic's top languages; test with short, misspelled notes.",o:"Track urgency by preferred language.",src:["nist","oecd"],why:["Language models reward fluent text.","Families with less English already face barriers."]},
+   "Fairness|Nurses":{s:"low",t:"Nurses on night shifts may lean harder on suggestions than day staff.",m:"Show the suggestion after the nurse sees the notes, not before.",o:"Compare override rates by shift.",src:["nist"],why:["Fatigue raises automation bias.","Nurses still decide, so low."]},
+   "Safety|Children":{s:"high",t:"A missed urgent case (for example sepsis or dehydration) could delay care for a child.",m:"Any red-flag word routes straight to a nurse; never show 'no need to come in'.",o:"Review every case later found to be under-triaged.",src:["nist","euai"],why:["Under-triage is the worst failure for this tool.","Children deteriorate quickly.","The EU AI Act treats medical triage as high-risk."]},
+   "Safety|Parents":{s:"medium",t:"Parents may treat a 'low urgency' result as medical advice and wait too long.",m:"Word results as 'what to do next', always with a call-the-clinic option.",o:"Survey parents on how they read the result.",src:["euai"],why:["Labels read as verdicts.","Copy and fallbacks can lower this a lot."]},
+   "Safety|Nurses":{s:"medium",t:"Alert volume may grow faster than nurse capacity during flu season.",m:"Set a queue limit that triggers extra staffing or a phone fallback.",o:"Watch queue length and time-to-review weekly.",src:["nist"],why:["Safety depends on someone reading the flag in time."]},
+   "Safety|Clinic":{s:"low",t:"An outage leaves parents without a route to triage.",m:"Show the clinic phone number when the tool is down.",o:"Uptime and fallback use.",src:["nist"],why:["Existing phone line limits harm."]},
+   "Autonomy|Children":{s:"low",t:"Older children aren't asked about their own symptoms.",m:"Allow teens to add their own notes.",o:"Count teen-entered notes.",src:["unesco"],why:["Children's voice matters, but parents still act for them."]},
+   "Autonomy|Parents":{s:"medium",t:"Parents can't see why a suggestion was made, so they can't push back.",m:"Show the two or three symptoms that drove the suggestion.",o:"Track how often parents call to dispute.",src:["euai","unesco"],why:["Without reasons there's nothing to disagree with."]},
+   "Transparency|Parents":{s:"medium",t:"Parents may not know they're talking to an AI.",m:"Say so at the start and on every result.",o:"Ask in the follow-up survey whether they knew.",src:["euai"],why:["The EU AI Act requires disclosure for chatbots."]},
+   "Transparency|Nurses":{s:"low",t:"Nurses don't know the model's known weak spots.",m:"Give nurses a one-page model card.",o:"Update the card each model version.",src:["nist"],why:["Knowing limits helps nurses calibrate trust."]},
+   "Transparency|Clinic":{s:"medium",t:"Clinic leadership can't explain how the tool decides if a family complains.",m:"Keep decision logs that a non-engineer can read.",o:"Test explaining three past cases each quarter.",src:["euai","nist"],why:["Accountability needs explanations people can follow."]}
+  },
+  questions:[
+   {q:"Who acts on the output?",opts:["Parents","Nurses","Physicians","No one, it's automatic"],def:["Nurses"],multi:true},
+   {q:"What data does it use?",opts:["Free-text symptoms","Health records","Photos","Location"],def:["Free-text symptoms"],multi:true},
+   {q:"Where will it run first?",opts:["Clinic pilot","Public app","Research only"],def:["Clinic pilot"],multi:false}
+  ],
+  effects:{
+   "No one, it's automatic":[["Safety","*",1],["Autonomy","Parents",1],["Transparency","Parents",1]],
+   "Parents":[["Safety","Parents",1]],
+   "Physicians":[["Safety","Nurses",-1]],
+   "Health records":[["Privacy","*",1]],
+   "Photos":[["Privacy","Children",1],["Privacy","Nurses",1]],
+   "Location":[["Privacy","Parents",1]],
+   "Public app":[["Safety","*",1],["Fairness","Parents",1],["Transparency","Parents",1]],
+   "Research only":[["Safety","*",-1]]
+  },
+  followups:["Why is privacy high for children?","What should we monitor after launch?","Compare with a home-app deployment"]
+ },
+ campus:{
+  title:"Campus attendance cameras", file:"attendance-cameras-abstract.pdf",
+  blurb:"Face recognition to take class attendance",
+  summary:{Purpose:"mark attendance from classroom camera footage", Users:"instructors; registrar sees reports", Data:"face images, student ID photos, timetables", Setting:"lecture halls at one university"},
+  ctx:{Domain:"Education · higher ed", Stage:"Concept", "Stakeholders (detected)":"Students, instructors, university"},
+  frameworks:["nist","euai","ferpa","gdpr"],
+  stakeholders:["Students","Instructors","University"],
+  principles:["Privacy","Fairness","Autonomy","Transparency"],
+  cells:{
+   "Privacy|Students":{s:"high",t:"Biometric data is collected every class, from students who can't easily opt out.",m:"Offer a non-camera check-in; delete face templates at term end.",o:"Count opt-outs and verify deletion each term.",src:["gdpr","euai","ferpa"],why:["Biometrics are a special category of data.","Attendance is tied to grades, so consent isn't free.","Scale: every student, every class."]},
+   "Privacy|Instructors":{s:"low",t:"Instructors appear in footage too.",m:"Crop or blur the lectern area.",o:"Spot-check stored frames.",src:["gdpr"],why:["Incidental capture, limited use."]},
+   "Privacy|University":{s:"medium",t:"The university holds a biometric database that becomes a breach target.",m:"Store templates, not images, on campus servers only.",o:"Annual security review.",src:["nist","gdpr"],why:["Central databases attract attackers."]},
+   "Fairness|Students":{s:"high",t:"Face recognition misses darker-skinned and gender-nonconforming students more often, so they get marked absent.",m:"Test accuracy per group before launch; never auto-penalise a miss.",o:"Report false-absent rates by group each month.",src:["nist","euai"],why:["Known accuracy gaps in face recognition.","Errors feed into grades.","Harm lands on groups already under-served."]},
+   "Fairness|Instructors":{s:"low",t:"Instructors may trust the attendance list over their own view.",m:"Let instructors correct the list in one click.",o:"Track correction rates.",src:["nist"],why:["Automation bias, but easy to correct."]},
+   "Autonomy|Students":{s:"medium",t:"Constant monitoring changes how students behave in class.",m:"Limit capture to the first five minutes.",o:"Student survey on feeling watched.",src:["unesco"],why:["Chilling effects are well documented."]},
+   "Transparency|Students":{s:"medium",t:"Students may not know when cameras are recording or how results are used.",m:"Post signs and a plain-language notice in the syllabus.",o:"Ask students in week 2 whether they know.",src:["euai","gdpr"],why:["Notice is a legal and ethical baseline."]},
+   "Transparency|University":{s:"medium",t:"Using face recognition in education may fall under EU AI Act high-risk rules.",m:"Get a legal review before procurement.",o:"Track regulatory changes.",src:["euai"],why:["Education is a listed high-risk area."]}
+  },
+  questions:[
+   {q:"Does attendance affect grades?",opts:["Yes","No","Only for some courses"],def:["Yes"],multi:false},
+   {q:"Can students opt out?",opts:["Yes, with another check-in","No opt-out"],def:["No opt-out"],multi:false}
+  ],
+  effects:{"No opt-out":[["Autonomy","Students",1]],"Yes, with another check-in":[["Privacy","Students",-1]]},
+  followups:["Is there a less invasive way to take attendance?","What should we test before launch?"]
+ },
+ tutor:{
+  title:"Intro CS tutor bot", file:"cs-tutor-abstract.pdf",
+  blurb:"LLM that hints on student code without giving answers",
+  summary:{Purpose:"give hints on intro programming assignments", Users:"first-year students; TAs read flagged chats", Data:"student code, chat messages, course rubric", Setting:"course website, one term pilot"},
+  ctx:{Domain:"Education · computing", Stage:"Prototype", "Stakeholders (detected)":"Students, TAs, instructor"},
+  frameworks:["nist","ferpa","acm"],
+  stakeholders:["Students","TAs","Instructor"],
+  principles:["Privacy","Fairness","Safety","Autonomy"],
+  cells:{
+   "Privacy|Students":{s:"medium",t:"Chat logs may reveal struggles or personal issues students wouldn't share with staff.",m:"Tell students who reads logs; let them delete chats.",o:"Review who accessed logs each term.",src:["ferpa"],why:["Students vent to tutors.","Logs are education records."]},
+   "Fairness|Students":{s:"medium",t:"Students who already code get more out of hints than true beginners.",m:"Offer beginner-level hints and worked examples.",o:"Compare grade gains by prior experience.",src:["acm","oecd"],why:["Tools often widen gaps."]},
+   "Safety|Students":{s:"low",t:"Wrong hints can teach misconceptions.",m:"Ground hints in the course rubric; flag low-confidence hints.",o:"TA spot-check 20 chats a week.",src:["nist"],why:["Low stakes, but errors compound."]},
+   "Autonomy|Students":{s:"high",t:"Students may lean on the bot instead of learning to debug on their own.",m:"Limit hints per problem; ask the student to explain first.",o:"Track hints per solved problem over the term.",src:["unesco","acm"],why:["The goal is learning, not finished code.","Over-reliance defeats the course goal."]},
+   "Autonomy|TAs":{s:"low",t:"TAs lose sight of where students struggle.",m:"Weekly digest of common stuck points.",o:"TA survey mid-term.",src:["acm"],why:["Office hours shift online."]},
+   "Fairness|Instructor":{s:"medium",t:"Academic integrity cases get harder to judge if the bot slips into giving answers.",m:"Publish what counts as allowed help.",o:"Count integrity cases that mention the bot.",src:["acm"],why:["Unclear rules make enforcement uneven."]}
+  },
+  questions:[
+   {q:"Is the bot required or optional?",opts:["Required","Optional"],def:["Optional"],multi:false},
+   {q:"Does it see graded work?",opts:["Yes","Practice only"],def:["Practice only"],multi:false}
+  ],
+  effects:{"Required":[["Autonomy","Students",1],["Fairness","Students",1]],"Yes":[["Fairness","Instructor",1]]},
+  followups:["How do we stop it giving full answers?","What should TAs watch for?"]
+ }
+};
+
+/* ---------- State ---------- */
+let S;
+function fresh(){
+  return {key:null, phase:"entry", msgs:[], answers:{}, cells:null, sel:null, panel:null, filter:{sev:"all",principle:"all",stake:"all"}, view:"grid", menu:null, share:null, recentOn:null, draft:"", summaryEdit:false, attached:false, busy:false};
+}
+S = fresh();
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const R = () => REVIEWS[S.key];
+const wait = ms => new Promise(r => setTimeout(r, matchMedia("(prefers-reduced-motion: reduce)").matches ? Math.min(ms,150) : ms));
+const arrow = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>';
+
+/* ---------- Dummy logic ---------- */
+function computeCells(){
+  const r = R(); const out = {};
+  for (const k in r.cells) out[k] = {...r.cells[k], base:r.cells[k].s, v:[{s:r.cells[k].s, note:null}], vi:0, status:"open", fb:null, reason:null};
+  const picked = Object.values(S.answers).flat();
+  for (const a of picked){
+    for (const [p, st, d] of (r.effects[a]||[])){
+      for (const k in out){
+        const [pp, ss] = k.split("|");
+        if (pp===p && (st==="*"||st===ss)){
+          const n = Math.max(1, Math.min(3, LV[out[k].s] + d));
+          out[k].s = NAME[n]; out[k].v[0].s = NAME[n];
+        }
+      }
+    }
+  }
+  return out;
+}
+function stats(){
+  const c = Object.values(S.cells); const open = c.filter(x=>x.status!=="dismissed");
+  const pr = new Set(Object.keys(S.cells).filter(k=>S.cells[k].status!=="dismissed").map(k=>k.split("|")[0]));
+  return {n:open.length, p:pr.size, high:open.filter(x=>x.s==="high").length};
+}
+function guessKey(text){
+  const t = text.toLowerCase();
+  if (/camera|face|attendance|surveil/.test(t)) return "campus";
+  if (/tutor|student|code|course|homework|cs\b/.test(t)) return "tutor";
+  return "triage";
+}
+
+/* ---------- Flow ---------- */
+async function startReview(key, typed, hasFile){
+  S = fresh(); S.key = key; S.phase = "context"; S.recentOn = null;
+  const r = R();
+  S.msgs.push({role:"user", attach: hasFile ? r.file : null, text: typed || "Here's our project abstract."});
+  S.msgs.push({role:"bot", kind:"typing"}); render();
+  await wait(1100);
+  S.msgs.pop();
+  S.msgs.push({role:"bot", kind:"summary"}); render();
+}
+async function confirmSummary(){
+  if (S.phase!=="context") return;
+  S.summaryEdit = false; S.phase = "clarify";
+  S.msgs.push({role:"user", text:"Looks right."});
+  S.msgs.push({role:"bot", kind:"typing"}); render();
+  await wait(800);
+  S.msgs.pop();
+  R().questions.forEach((q,i)=> S.answers[i] = [...q.def]);
+  S.msgs.push({role:"bot", kind:"questions"}); render();
+}
+async function generate(skipped){
+  if (S.phase!=="clarify") return;
+  if (skipped) S.answers = {};
+  S.phase = "report"; S.cells = computeCells(); S.sel = null;
+  const r = R();
+  const picked = Object.values(S.answers).flat();
+  S.msgs.push({role:"user", text: skipped ? "Skip questions." : (picked.length ? "Answers: " + picked.join(", ") + "." : "Generate risk review.")});
+  S.msgs.push({role:"bot", kind:"ready", stepsDone:0}); S.building = true; render();
+  const m = S.msgs[S.msgs.length-1];
+  for (let i=1;i<=4;i++){ await wait(450); m.stepsDone = i; render(); }
+  S.building = false; render();
+}
+function openRecent(key){
+  S = fresh(); S.key = key; S.recentOn = key; S.phase = "report";
+  R().questions.forEach((q,i)=> S.answers[i] = [...q.def]);
+  S.cells = computeCells();
+  S.msgs = [{role:"user", attach:R().file, text:"Here's our project abstract."},{role:"bot", kind:"ready", stepsDone:4, past:true}];
+  render();
+}
+function selectCell(k){ S.sel = k; S.panel = null; S.menu = null; render(); const d=$("#detail"); if(d) d.scrollIntoView({block:"nearest", behavior:"smooth"}); }
+
+async function botAnswer(question, quote){
+  S.msgs.push({role:"user", text:question, quote}); S.msgs.push({role:"bot", kind:"typing"}); render(); scrollChat();
+  await wait(900); S.msgs.pop();
+  S.msgs.push(Object.assign({role:"bot", kind:"answer", open:false}, cannedAnswer(question, quote))); render(); scrollChat();
+}
+function topHigh(){ return Object.keys(S.cells).find(k=>S.cells[k].s==="high" && S.cells[k].status!=="dismissed") || Object.keys(S.cells)[0]; }
+function cannedAnswer(q, quote){
+  const t = q.toLowerCase(); const r = R();
+  let k = quote ? quote.replace(" × ","|") : null;
+  if (!k && /privacy/.test(t)) k = Object.keys(S.cells).find(x=>x.startsWith("Privacy|") && S.cells[x].s==="high") || Object.keys(S.cells).find(x=>x.startsWith("Privacy|"));
+  if (k && S.cells[k] && (/why|high|this/.test(t) || quote)){
+    const c = S.cells[k];
+    return {text: c.why.join(" ") , steps:["Read the abstract and your answers", "Matched the tension to "+c.src.map(s=>SOURCES[s]).join(" and "), "Checked who is affected and how badly", "Rated it "+c.s], src:c.src};
+  }
+  if (/monitor/.test(t)){
+    const ks = Object.keys(S.cells).filter(x=>S.cells[x].status!=="dismissed").sort((a,b)=>LV[S.cells[b].s]-LV[S.cells[a].s]).slice(0,3);
+    return {text:"Start with the three highest-rated tensions: " + ks.map(x=>x.replace("|"," × ")+": "+S.cells[x].o.replace(/\.$/,"")).join("; ")+".", steps:["Sorted tensions by severity","Pulled the monitoring idea for each"], src:["nist"]};
+  }
+  if (/compare|home|public/.test(t)){
+    return {text:"As a public home app, there is no nurse in the loop for most cases. Safety ratings rise for every stakeholder, Fairness × Parents rises because access depends on phone and language, and Transparency × Parents rises because there's no clinician to explain results. Try it by starting a new review and choosing “Public app”.", steps:["Re-ran the clarify answers with “Public app”","Compared ratings with the current review"], src:["euai","nist"]};
+  }
+  if (/less invasive|alternative/.test(t)) return {text:"QR check-in with a rotating code, or a one-tap check-in in the course app, gets most of the benefit with no biometrics. Both drop Privacy × Students from high to low in this review.", steps:["Looked for options with the same goal","Re-rated privacy for each"], src:["gdpr"]};
+  if (/test/.test(t)) return {text:"Test accuracy on a balanced sample of students by skin tone and gender presentation, and test what happens on a miss. A miss should never mark a student absent without instructor review.", steps:["Pulled mitigation ideas for high risks"], src:["nist"]};
+  if (/full answer|stop it/.test(t)) return {text:"Cap hints per problem, ask the student to explain their approach before each hint, and block outputs longer than a few lines of code. TAs should spot-check chats weekly.", steps:["Pulled mitigations for Autonomy × Students"], src:["acm"]};
+  if (/ta|watch/.test(t)) return {text:"Watch for students who ask for hints on every problem, chats that drift into personal topics, and hints that contradict the rubric.", steps:["Pulled monitoring ideas"], src:["acm"]};
+  return {text:"This is a prototype, so answers are canned. In the real tool I'd answer about “"+ (S.sel? S.sel.replace("|"," × ") : r.title) +"” using your abstract and the frameworks. Try one of the suggested questions, or select a cell in the grid.", steps:["Prototype reply"], src:[]};
+}
+function scrollChat(){ const c = $("#chatscroll"); if (c) c.scrollTop = c.scrollHeight; }
+
+function sendComposer(){
+  const ta = $("#composer"); const v = (ta ? ta.value : "").trim();
+  if (S.phase==="entry"){
+    if (!v && !S.attached) { ta && ta.focus(); toast("Paste an abstract, attach one, or pick a sample."); return; }
+    startReview(guessKey(v || ""), v || null, S.attached); return;
+  }
+  if (!v) return;
+  if (S.phase==="context"){ S.msgs.push({role:"user", text:v}); S.msgs.push({role:"bot", kind:"text", text:"Thanks, I've added that to the project context. Does the summary look right now?"}); render(); return; }
+  if (S.phase==="clarify"){ S.msgs.push({role:"user", text:v}); S.msgs.push({role:"bot", kind:"text", text:"Got it. I'll factor that in. Press “Generate risk review” when you're ready."}); render(); return; }
+  if (S.phase==="report"){ botAnswer(v, S.sel ? S.sel.replace("|"," × ") : null); }
+}
+
+/* ---------- Rendering ---------- */
+function renderSide(){
+  $("#side").innerHTML = `
+    <div class="logo">ethi.dev</div>
+    <button class="btn btn-secondary" data-action="new">+ New review</button>
+    <button class="navlink" data-action="soon">Search reviews</button>
+    <button class="navlink" data-action="soon">Projects</button>
+    <div class="overline">Recent reviews</div>
+    ${Object.keys(REVIEWS).map(k=>`<button class="recent ${(S.recentOn===k || (S.key===k && S.phase!=="entry"))?"on":""}" data-action="recent" data-key="${k}">${esc(REVIEWS[k].title)}</button>`).join("")}`;
+}
+function composerHTML(ph, compact){
+  return `<div class="composer ${compact?"compact":""}">
+    <textarea id="composer" rows="${compact?1:2}" placeholder="${esc(ph)}" aria-label="${esc(ph)}"></textarea>
+    ${compact ? `<button class="send" data-action="send" aria-label="Send">${arrow}</button>` : `
+    <div class="comp-row">
+      ${S.phase==="entry" ? (S.attached ? `<span class="attach"><span class="fileicon"></span>my-project-abstract.pdf · 1 page <button data-action="unattach" aria-label="Remove attachment">✕</button></span>` : `<button class="chip" data-action="attach">+ Attach abstract</button>`) : `<button class="chip" data-action="soon">+ Attach</button>`}
+      ${S.phase==="entry" ? `<span class="chip static">Frameworks: NIST AI RMF, EU AI Act</span>` : ""}
+      <span class="sp"></span>
+      <button class="send" data-action="send" aria-label="Send">${arrow}</button>
+    </div>`}
+  </div>`;
+}
+function msgHTML(m, i){
+  const r = R();
+  if (m.role==="user") return `<div class="msg-user fade">${m.quote?`<span class="quote">“${esc(m.quote)}”</span>`:""}${m.attach?`<span class="attach"><span class="fileicon"></span>${esc(m.attach)} · 1 page</span>`:""}<span>${esc(m.text)}</span></div>`;
+  let body = "";
+  if (m.kind==="typing") body = `<div class="typing" aria-label="ethi.dev is writing"><i></i><i></i><i></i></div>`;
+  if (m.kind==="text") body = `<p>${esc(m.text)}</p>`;
+  if (m.kind==="summary"){
+    const done = S.phase!=="context";
+    body = `<p>I read “${esc(r.title)}” (1 page). Here's what I understood. Check it before I look for risks:</p>
+      <div class="card summary-list">${Object.entries(r.summary).map(([k,v])=>`<div><b>${k}:</b> <span ${S.summaryEdit?'contenteditable="true"':""} data-sum="${k}">${esc(v)}</span></div>`).join("")}</div>
+      ${done?"":`<div class="row-btns">${S.summaryEdit?`<button class="btn btn-primary btn-sm" data-action="save-summary">Save summary</button>`:`<button class="btn btn-primary btn-sm" data-action="confirm">Looks right</button><button class="btn btn-secondary btn-sm" data-action="edit-summary">Edit summary</button>`}</div>`}`;
+  }
+  if (m.kind==="questions"){
+    const locked = S.phase!=="clarify";
+    body = `<p>${r.questions.length===3?"Three":"Two"} quick questions so the risks are specific to your project. Skip any you're unsure about.</p>
+      ${r.questions.map((q,qi)=>`<div class="card qcard"><h3>${esc(q.q)}</h3><div class="chips" role="group" aria-label="${esc(q.q)}">${q.opts.map(o=>`<button class="chip" ${locked?"disabled":""} aria-pressed="${(S.answers[qi]||[]).includes(o)}" data-action="answer" data-q="${qi}" data-o="${esc(o)}">${esc(o)}</button>`).join("")}</div></div>`).join("")}
+      ${locked?"":`<div class="row-btns"><button class="btn btn-primary btn-sm" data-action="generate">Generate risk review</button><button class="btn btn-secondary btn-sm" data-action="skip">Skip questions</button></div><span class="caption">One round only. You can add context later. Answers change the ratings.</span>`}`;
+  }
+  if (m.kind==="ready"){
+    const st = stats(); const steps = [`Mapped ${r.stakeholders.length} stakeholders`, `Checked ${r.principles.length} principles`, `Matched ${r.frameworks.map(f=>SOURCES[f].replace(" 1.0","")).slice(0,2).join(", ")}`, "Ranked by severity"];
+    const ready = m.stepsDone>=4;
+    body = `<p>${ready ? `Your risk review is ready: ${st.n} tensions across ${st.p} principles, ${st.high} rated high. It's in the panel on the right.` : "Building your risk review…"}</p>
+      <div class="card steps">${steps.map((s,j)=>`<div class="step ${j<m.stepsDone?"done":""}"><span class="tick"></span>${esc(s)}</div>`).join("")}</div>
+      ${ready?`<div class="overline">Suggested next</div><div class="followups">${r.followups.map(f=>`<button class="followup" data-action="ask" data-q="${esc(f)}">↳ ${esc(f)}</button>`).join("")}</div>`:""}`;
+  }
+  if (m.kind==="answer"){
+    body = `<button class="reasoning" data-action="toggle-reason" data-i="${i}" aria-expanded="${m.open}">${m.open?"▾":"▸"} Reasoning · ${m.steps.length} step${m.steps.length>1?"s":""}</button>
+      ${m.open?`<ol class="reasoning-list">${m.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:""}
+      <p>${esc(m.text)}</p>
+      ${m.src.length?`<span class="sources">Sources: ${m.src.map((s,j)=>esc(SOURCES[s])+" ["+(j+1)+"]").join(" · ")}</span>`:""}
+      <div class="fb"><button class="chip" data-action="copy-answer" data-i="${i}">Copy</button><button class="chip" aria-pressed="${m.fb==="up"}" data-action="fb-msg" data-v="up" data-i="${i}">Useful</button><button class="chip" aria-pressed="${m.fb==="down"}" data-action="fb-msg" data-v="down" data-i="${i}">Not useful</button></div>`;
+  }
+  return `<div class="msg-bot fade"><span class="avatar" aria-hidden="true">e</span><div class="bot-body">${body}</div></div>`;
+}
+function badge(c){
+  if (c.status==="dismissed") return `<span class="badge dismissed">Dismissed</span>`;
+  if (c.status==="addressed") return `<span class="badge addressed">✓ Addressed</span>`;
+  return `<span class="badge ${c.s}">${c.s}</span>`;
+}
+function passes(k){
+  const c = S.cells[k]; const [p,s] = k.split("|"); const f = S.filter;
+  if (f.sev!=="all" && c.s!==f.sev) return false;
+  if (f.principle!=="all" && p!==f.principle) return false;
+  if (f.stake!=="all" && s!==f.stake) return false;
+  return true;
+}
+function canvasHTML(){
+  const r = R();
+  if (S.building) return `<div class="canvas"><div class="canvas-head"><h2>Risk review · ${esc(r.title)}</h2></div><p class="caption">Mapping tensions…</p></div>`;
+  const st = stats();
+  const fl = (id,label,val,opts)=>`<button class="chip" data-action="menu" data-menu="${id}" aria-haspopup="true" aria-expanded="${S.menu===id}" ${val!=="all"?'aria-pressed="true"':""}>${label}${val!=="all"?": "+esc(val):""} <span class="caret"></span></button>`;
+  const menu = S.menu ? (()=>{
+    const map = {sev:["all","high","medium","low"], principle:["all",...r.principles], stake:["all",...r.stakeholders]};
+    return `<div class="menu" role="menu" style="top:36px;left:${({sev:0,principle:110,stake:230})[S.menu]}px">${map[S.menu].map(o=>`<button role="menuitemradio" aria-checked="${S.filter[S.menu]===o}" data-action="setfilter" data-f="${S.menu}" data-v="${esc(o)}">${o==="all"?"All":esc(o[0].toUpperCase()+o.slice(1))}</button>`).join("")}</div>`;
+  })() : "";
+  const dismissed = Object.keys(S.cells).filter(k=>S.cells[k].status==="dismissed");
+  let main;
+  if (S.view==="grid"){
+    main = `<div class="gridwrap"><table class="grid"><thead><tr><th scope="col"><span class="sr" style="position:absolute;left:-9999px">Principle</span></th>${r.stakeholders.map(s=>`<th scope="col">${esc(s)}</th>`).join("")}</tr></thead><tbody>
+      ${r.principles.map(p=>`<tr><th scope="row">${esc(p)}</th>${r.stakeholders.map(s=>{const k=p+"|"+s; const c=S.cells[k];
+        if(!c) return `<td><span class="cellbtn"><span class="nf">Not flagged</span></span></td>`;
+        return `<td><button class="cellbtn ${S.sel===k?"sel":""} ${passes(k)?"":"dim"}" data-action="cell" data-k="${esc(k)}" aria-label="${esc(p+" × "+s+", "+(c.status==="open"?c.s:c.status))}">${badge(c)}${c.v.length>1?`<span class="mark">v${c.vi+1}</span>`:""}</button></td>`;}).join("")}</tr>`).join("")}
+      </tbody></table></div>
+      <div class="legend"><span><span class="badge high">high</span></span><span><span class="badge medium">medium</span></span><span><span class="badge low">low</span></span><span>Not flagged: no tension found for this pair</span></div>`;
+  } else {
+    const ks = Object.keys(S.cells).filter(k=>S.cells[k].status!=="dismissed" && passes(k)).sort((a,b)=>LV[S.cells[b].s]-LV[S.cells[a].s]);
+    main = `<div class="list">${ks.map(k=>{const c=S.cells[k]; return `<div class="lrow"><button class="t" data-action="cell" data-k="${esc(k)}">${esc(k.replace("|"," × "))}<span>${esc(c.t)}</span></button>${badge(c)}<div class="fb"><button class="chip" aria-pressed="${c.fb==="up"}" data-action="fb" data-k="${esc(k)}" data-v="up">Useful</button><button class="chip" aria-pressed="${c.fb==="down"}" data-action="fb" data-k="${esc(k)}" data-v="down">Not useful</button></div></div>`}).join("") || `<p class="caption">No tensions match these filters.</p>`}</div>`;
+  }
+  return `<div class="canvas" id="canvas">
+    <div class="canvas-head"><h2>Risk review · ${esc(r.title)}</h2>
+      <div class="seg" role="group" aria-label="View"><button aria-pressed="${S.view==="grid"}" data-action="view" data-v="grid">Grid</button><button aria-pressed="${S.view==="list"}" data-action="view" data-v="list">List</button></div>
+      <button class="btn btn-secondary btn-sm" data-action="share">Share</button>
+      <button class="btn btn-secondary btn-sm" data-action="export">Export</button></div>
+    <p class="caption" style="margin:0">Tensions to weigh, not a grade. ${S.view==="grid"?"Rows are principles, columns are stakeholders. Select a rating to see details.":"Sorted by severity."} ${st.n} open tensions, ${st.high} high.</p>
+    <div class="filters">${fl("sev","Severity",S.filter.sev)}${fl("principle","Principle",S.filter.principle)}${fl("stake","Stakeholder",S.filter.stake)}${(S.filter.sev+S.filter.principle+S.filter.stake)!=="allallall"?`<button class="followup" data-action="clearfilter">Clear filters</button>`:""}${menu}</div>
+    ${main}
+    ${S.sel ? detailHTML() : (S.view==="grid"?`<div class="card caption">Select a rating in the grid to see the tension, a mitigation, a monitoring idea and sources.</div>`:"")}
+    ${dismissed.length?`<details class="dismissed-list card"><summary>Dismissed (${dismissed.length})</summary><ul>${dismissed.map(k=>`<li><b>${esc(k.replace("|"," × "))}</b><span class="caption">${esc(S.cells[k].reason.chip)}${S.cells[k].reason.note?": "+esc(S.cells[k].reason.note):""}</span><button class="followup" data-action="restore" data-k="${esc(k)}">Restore</button></li>`).join("")}</ul></details>`:""}
+  </div>`;
+}
+function detailHTML(){
+  const k = S.sel; const c = S.cells[k]; const label = k.replace("|"," × ");
+  let panel = "";
+  if (S.panel==="dismiss"){
+    const chips = ["Not relevant to our use","Already mitigated","Out of scope for now","Other"];
+    panel = `<div class="subpanel"><h4>Dismiss “${esc(label)}”</h4>
+      <div class="chips">${chips.map(ch=>`<button class="chip" aria-pressed="${S.dismissChip===ch}" data-action="dchip" data-v="${esc(ch)}">${esc(ch)}</button>`).join("")}</div>
+      <input class="textin" id="dnote" placeholder="Add a note for your advisor (optional)" aria-label="Note for your advisor">
+      <div class="row-btns"><button class="btn btn-primary btn-sm" data-action="do-dismiss" ${S.dismissChip?"":"disabled"}>Dismiss</button><button class="btn btn-secondary btn-sm" data-action="close-panel">Cancel</button></div>
+      <span class="caption">Dismissed risks stay visible in a collapsed list with your reason.</span></div>`;
+  }
+  if (S.panel==="rerun"){
+    panel = `<div class="subpanel"><h4>Add context and re-run this rating</h4>
+      <input class="textin" id="rnote" placeholder="e.g. Notes are de-identified before a nurse reads them" aria-label="Context to add">
+      <div class="row-btns"><button class="btn btn-primary btn-sm" data-action="do-rerun">Re-run</button><button class="btn btn-secondary btn-sm" data-action="close-panel">Cancel</button></div>
+      <span class="caption">Only this rating changes. The earlier version is kept.</span></div>`;
+  }
+  if (S.panel==="running") panel = `<div class="subpanel"><div class="typing"><i></i><i></i><i></i></div><span class="caption">Re-running ${esc(label)}…</span></div>`;
+  const v = c.v[c.vi];
+  return `<div class="card detail fade" id="detail">
+    <div class="detail-head"><h3>${esc(label)}</h3>${badge(c)}
+      ${c.v.length>1?`<span class="versions">Version <button aria-pressed="${c.vi===0}" data-action="ver" data-v="0">1</button><button aria-pressed="${c.vi===1}" data-action="ver" data-v="1">2</button></span>`:""}</div>
+    <dl class="kv"><dt>Tension</dt><dd>${esc(c.t)}</dd><dt>Mitigation</dt><dd>${esc(c.m)}</dd><dt>Monitoring</dt><dd>${esc(c.o)}</dd>
+      ${v.note?`<dt>Your context</dt><dd>${esc(v.note)}</dd>`:""}
+      <dt>Sources</dt><dd class="sources">${c.src.map((s,j)=>esc(SOURCES[s])+" ["+(j+1)+"]").join(" · ")}</dd></dl>
+    ${panel}
+    <div class="actions">
+      <button class="btn btn-secondary btn-sm" data-action="why">Why this rating?</button>
+      ${c.status==="dismissed"?`<button class="btn btn-secondary btn-sm" data-action="restore" data-k="${esc(k)}">Restore</button>`:`<button class="btn btn-secondary btn-sm" data-action="open-dismiss">Dismiss with a reason</button>`}
+      <button class="btn btn-secondary btn-sm" data-action="open-rerun">Add context and re-run</button>
+      <button class="btn btn-secondary btn-sm" data-action="addressed">${c.status==="addressed"?"Mark as open":"Mark as addressed"}</button>
+      <span style="flex:1"></span>
+      <button class="chip" aria-pressed="${c.fb==="up"}" data-action="fb" data-k="${esc(k)}" data-v="up">Useful</button>
+      <button class="chip" aria-pressed="${c.fb==="down"}" data-action="fb" data-k="${esc(k)}" data-v="down">Not useful</button>
+    </div></div>`;
+}
+function render(){
+  renderSide();
+  const main = $("#main"); const keep = $("#composer") ? $("#composer").value : "";
+  if (S.phase==="entry"){
+    main.innerHTML = `<div class="entry"><div class="entry-inner">
+      <h1>What are you building?</h1>
+      <p class="lead">Paste a project abstract. ethi.dev lists the ethical tensions specific to it, with mitigation and monitoring ideas. It never gives a pass/fail grade.</p>
+      ${composerHTML("Paste your project abstract or describe your idea…")}
+      <div class="center-cap">Try a sample abstract</div>
+      <div class="samples">${Object.keys(REVIEWS).map(k=>`<button class="sample" data-action="sample" data-key="${k}"><b>${esc(REVIEWS[k].title)}</b><span>${esc(REVIEWS[k].blurb)}</span></button>`).join("")}</div>
+      <p class="limits">ethi.dev is an AI and can miss risks. Review results with an advisor.</p>
+    </div></div>`;
+  } else if (S.phase==="context" || S.phase==="clarify"){
+    const r = R();
+    main.innerHTML = `<div class="col" style="flex:1"><div class="scroll" id="chatscroll"><div class="thread">${S.msgs.map(msgHTML).join("")}</div></div>
+      <div class="composer-wrap">${composerHTML(S.phase==="context"?"Add anything the abstract leaves out…":"Or type your own answer…")}<span class="limits">ethi.dev raises tensions, not verdicts. It can miss risks, so review with an advisor.</span></div></div>
+      <aside class="ctx" aria-label="Project context"><h2>Project context</h2><span class="caption">Used for every review in this project. Edit anytime.</span>
+        ${Object.entries(r.ctx).map(([k,v])=>`<div class="field"><span class="overline">${esc(k)}</span>${esc(v)}</div>`).join("")}
+        <div class="field"><span class="overline">Sources</span>${esc(r.file)}</div>
+        <div><button class="chip" data-action="soon">+ Add file</button></div></aside>`;
+  } else {
+    main.innerHTML = `<div class="col chatcol"><div class="scroll" id="chatscroll"><div class="thread">${S.msgs.map(msgHTML).join("")}</div></div>
+      <div class="composer-wrap">${composerHTML(S.sel?"Ask about "+S.sel.replace("|"," × ")+"…":"Ask about the review…", true)}</div></div>
+      ${canvasHTML()}`;
+  }
+  const ta = $("#composer"); if (ta && keep) ta.value = keep;
+  scrollChat();
+  renderJumps(); renderLayer();
+}
+function renderLayer(){
+  const L = $("#layer");
+  if (!S.share){ L.innerHTML = ""; return; }
+  const r = R(); const slug = S.key==="triage"?"pediatric-triage-7f3a":S.key+"-2c91";
+  L.innerHTML = `<div class="scrim" data-action="close-share-bg"><div class="dialog fade" role="dialog" aria-modal="true" aria-labelledby="sharetitle">
+    <div class="dialog-head"><h2 id="sharetitle">Share risk review</h2><button class="xbtn" data-action="close-share" aria-label="Close">✕</button></div>
+    <span class="caption">Includes the grid, your dismissals and their reasons. Future edits are included.</span>
+    <div role="radiogroup" aria-label="Who can open it" style="display:flex;flex-direction:column;gap:8px">
+      <button class="opt" role="radio" aria-checked="${S.share.mode==="private"}" data-action="share-mode" data-v="private"><span><b>Keep private</b><span>Only you can open it</span></span><span class="radio"></span></button>
+      <button class="opt" role="radio" aria-checked="${S.share.mode==="advisor"}" data-action="share-mode" data-v="advisor"><span><b>Share with advisor</b><span>Only people you invite can view and comment</span></span><span class="radio"></span></button>
+    </div>
+    ${S.share.mode==="advisor"?`<input class="textin" id="invite" placeholder="Advisor's email, e.g. advisor@university.edu" aria-label="Advisor email">
+      <div class="linkrow"><code>ethi.dev/r/${slug}</code><button class="btn btn-primary btn-sm" data-action="copy-link" data-v="https://ethi.dev/r/${slug}">Copy link</button></div>`:""}
+    <div class="row-btns"><button class="btn btn-secondary btn-sm" data-action="export">Export PDF</button><button class="btn btn-secondary btn-sm" data-action="export">Export CSV</button>
+      <span style="flex:1"></span>${S.share.mode==="advisor"?`<button class="btn btn-primary btn-sm" data-action="send-invite">Send invite</button>`:""}</div>
+  </div></div>`;
+}
+const JUMPS = [["entry","1 Entry"],["context","2 Context"],["clarify","3 Clarify"],["report","4 Report"],["refine","5 Refine"],["share","6 Share"]];
+function renderJumps(){
+  const cur = S.share?"share":(S.phase==="report" && S.panel ? "refine" : S.phase);
+  $("#jumps").innerHTML = JUMPS.map(([k,l])=>`<button class="${cur===k?"on":""}" data-action="jump" data-v="${k}">${l}</button>`).join("");
+}
+async function jump(to){
+  if (to==="entry"){ S = fresh(); render(); return; }
+  S = fresh(); S.key="triage"; S.msgs=[{role:"user",attach:R().file,text:"Here's our project abstract."},{role:"bot",kind:"summary"}]; S.phase="context";
+  if (to==="context"){ render(); return; }
+  S.phase="clarify"; S.msgs.push({role:"user",text:"Looks right."}); R().questions.forEach((q,i)=>S.answers[i]=[...q.def]); S.msgs.push({role:"bot",kind:"questions"});
+  if (to==="clarify"){ render(); return; }
+  S.phase="report"; S.cells=computeCells(); S.msgs.push({role:"user",text:"Answers: "+Object.values(S.answers).flat().join(", ")+"."}); S.msgs.push({role:"bot",kind:"ready",stepsDone:4});
+  if (to==="report"){ S.sel="Privacy|Children"; render(); return; }
+  if (to==="refine"){ S.sel="Privacy|Children"; S.panel="dismiss"; S.dismissChip=null; const a=cannedAnswer("Why is this high?","Privacy × Children"); S.msgs.push({role:"user",text:"Why is this high?",quote:"Privacy × Children"}); S.msgs.push(Object.assign({role:"bot",kind:"answer",open:false},a)); render(); return; }
+  if (to==="share"){ S.view="list"; S.share={mode:"advisor"}; render(); }
+}
+let toastT;
+function toast(msg){
+  let t = $("#toast"); if (!t){ t = document.createElement("div"); t.id="toast"; t.className="toast"; t.setAttribute("role","status"); document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=>t.hidden=true, 2600);
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", async e=>{
+  const b = e.target.closest("[data-action]");
+  if (S.menu && !(b && (b.dataset.action==="setfilter"||b.dataset.action==="menu"))){ S.menu=null; if(!b){render();return;} }
+  if (!b) return;
+  const a = b.dataset.action, d = b.dataset;
+  if (a==="close-share-bg" && e.target!==b) return;
+  switch(a){
+    case "reset": case "new": S = fresh(); render(); $("#side").classList.remove("open"); break;
+    case "toggle-side": $("#side").classList.toggle("open"); break;
+    case "jump": jump(d.v); break;
+    case "sample": startReview(d.key, null, true); break;
+    case "recent": openRecent(d.key); $("#side").classList.remove("open"); break;
+    case "attach": S.attached=true; render(); break;
+    case "unattach": S.attached=false; render(); break;
+    case "send": sendComposer(); break;
+    case "confirm": confirmSummary(); break;
+    case "edit-summary": S.summaryEdit=true; render(); const f=document.querySelector("[data-sum]"); f&&f.focus(); break;
+    case "save-summary": document.querySelectorAll("[data-sum]").forEach(el=>{ R().summary[el.dataset.sum]=el.textContent.trim(); }); S.summaryEdit=false; toast("Summary updated"); render(); break;
+    case "answer": { const q=R().questions[+d.q]; let cur=S.answers[d.q]||[]; if(q.multi){ cur=cur.includes(d.o)?cur.filter(x=>x!==d.o):[...cur,d.o]; } else { cur=cur.includes(d.o)?[]:[d.o]; } S.answers[d.q]=cur; render(); break; }
+    case "generate": generate(false); break;
+    case "skip": generate(true); break;
+    case "cell": selectCell(d.k); break;
+    case "ask": botAnswer(d.q); break;
+    case "why": botAnswer("Why is this "+S.cells[S.sel].s+"?", S.sel.replace("|"," × ")); break;
+    case "toggle-reason": S.msgs[+d.i].open=!S.msgs[+d.i].open; render(); break;
+    case "copy-answer": copy(S.msgs[+d.i].text, "Answer copied"); break;
+    case "fb-msg": { const m=S.msgs[+d.i]; m.fb = m.fb===d.v?null:d.v; render(); if(m.fb) toast("Thanks. Feedback saved."); break; }
+    case "fb": { const c=S.cells[d.k]; c.fb = c.fb===d.v?null:d.v; render(); if(c.fb) toast("Thanks. Feedback saved."); break; }
+    case "open-dismiss": S.panel="dismiss"; S.dismissChip=null; render(); break;
+    case "open-rerun": S.panel="rerun"; render(); $("#rnote")&&$("#rnote").focus(); break;
+    case "close-panel": S.panel=null; render(); break;
+    case "dchip": S.dismissChip = S.dismissChip===d.v?null:d.v; const note=$("#dnote")?$("#dnote").value:""; render(); if($("#dnote")) $("#dnote").value=note; break;
+    case "do-dismiss": { const c=S.cells[S.sel]; c.status="dismissed"; c.reason={chip:S.dismissChip, note:($("#dnote")||{}).value||""}; S.panel=null; toast("Dismissed. It's in the Dismissed list with your reason."); render(); break; }
+    case "restore": S.cells[d.k].status="open"; S.cells[d.k].reason=null; render(); break;
+    case "addressed": { const c=S.cells[S.sel]; c.status = c.status==="addressed"?"open":"addressed"; render(); break; }
+    case "do-rerun": {
+      const note = ($("#rnote")||{}).value.trim(); if(!note){ toast("Add a sentence of context first."); return; }
+      S.panel="running"; render(); await wait(1200);
+      const c=S.cells[S.sel]; const good=/anonym|de-?identif|consent|delete|remove|strip|review|nurse|encrypt|opt.?out|limit|cap|human/i.test(note);
+      const ns = good ? NAME[Math.max(1, LV[c.v[0].s]-1)] : c.v[0].s;
+      c.v=[c.v[0],{s:ns,note}]; c.vi=1; c.s=ns; S.panel=null; render();
+      toast(good && ns!==c.v[0].s ? "Re-run lowered this to "+ns+"." : "Re-run kept the same rating. See version 2.");
+      break; }
+    case "ver": { const c=S.cells[S.sel]; c.vi=+d.v; c.s=c.v[c.vi].s; render(); break; }
+    case "view": S.view=d.v; render(); break;
+    case "menu": S.menu = S.menu===d.menu?null:d.menu; render(); break;
+    case "setfilter": S.filter[d.f]=d.v; S.menu=null; render(); break;
+    case "clearfilter": S.filter={sev:"all",principle:"all",stake:"all"}; render(); break;
+    case "share": S.share={mode:"private"}; render(); break;
+    case "close-share": case "close-share-bg": S.share=null; render(); break;
+    case "share-mode": S.share.mode=d.v; render(); break;
+    case "copy-link": copy(d.v, "Link copied (prototype link, it won't open)"); break;
+    case "send-invite": { const v=($("#invite")||{}).value||""; if(!/.+@.+\..+/.test(v)){ toast("Enter your advisor's email first."); return; } S.share=null; render(); toast("Invite ready to send to "+v+" (prototype: nothing was sent)."); break; }
+    case "export": toast("Export isn't built in the prototype yet."); break;
+    case "soon": toast("Not in this prototype yet."); break;
+  }
+});
+document.addEventListener("keydown", e=>{
+  if (e.target.id==="composer" && e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendComposer(); }
+  if (e.key==="Escape"){ if(S.share){S.share=null;render();} else if(S.menu){S.menu=null;render();} }
+  if (e.target.id==="rnote" && e.key==="Enter"){ document.querySelector('[data-action="do-rerun"]').click(); }
+});
+function copy(text, msg){
+  try { navigator.clipboard.writeText(text).then(()=>toast(msg), ()=>toast("Copy isn't available here. Select the text instead.")); }
+  catch(_) { toast("Copy isn't available here. Select the text instead."); }
+}
+render();
+</script>
+</body>
+</html>
